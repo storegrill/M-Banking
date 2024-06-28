@@ -14,42 +14,102 @@ class User extends Authenticatable
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var array
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'name', 'email', 'password', 'phone_number', 'address', 'is_verified',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * The attributes that should be hidden for arrays.
      *
-     * @var array<int, string>
+     * @var array
      */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password', 'remember_token',
     ];
 
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array<string, string>
+     * @var array
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'is_verified' => 'boolean',
+    ];
 
     /**
-     * Get the accounts for the user.
+     * Get the accounts associated with the user.
      */
     public function accounts()
     {
         return $this->hasMany(Account::class);
+    }
+
+    /**
+     * Get the transactions associated with the user.
+     */
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * Get the notifications for the user.
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get the multi-language settings for the user.
+     */
+    public function multiLanguage()
+    {
+        return $this->hasOne(MultiLanguage::class);
+    }
+
+    /**
+     * Get the geolocation settings for the user.
+     */
+    public function geolocation()
+    {
+        return $this->hasOne(Geolocation::class);
+    }
+
+    /**
+     * Get the investments associated with the user.
+     */
+    public function investments()
+    {
+        return $this->hasMany(Investment::class);
+    }
+
+    /**
+     * Get the mobile recharges associated with the user.
+     */
+    public function mobileRecharges()
+    {
+        return $this->hasMany(MobileRecharge::class);
+    }
+
+    /**
+     * Get the virtual cards associated with the user.
+     */
+    public function virtualCards()
+    {
+        return $this->hasMany(VirtualCard::class);
+    }
+
+    /**
+     * Determine if the user is an admin.
+     *
+     * @return bool
+     */
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
     }
 }

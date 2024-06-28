@@ -11,18 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
+        Schema::create('stripe_transactions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('account_id');
-            $table->unsignedBigInteger('target_account_id')->nullable();
-            $table->enum('type', ['deposit', 'withdrawal', 'transfer']);
+            $table->string('transaction_id')->unique();
             $table->decimal('amount', 15, 2);
+            $table->string('currency');
+            $table->string('status');
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('account_id')->references('id')->on('accounts')->onDelete('cascade');
-            $table->foreign('target_account_id')->references('id')->on('accounts')->onDelete('cascade');
         });
     }
 
@@ -31,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transactions');
+        Schema::dropIfExists('stripe_transactions');
     }
 };
