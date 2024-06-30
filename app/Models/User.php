@@ -112,4 +112,10 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
+
+    public function digitalWallet()
+{
+    return $this->hasOne(DigitalWallet::class);
 }
+}
+

@@ -76,3 +76,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/transactions', [TransactionController::class, 'store']);
     Route::get('/transactions/{id}', [TransactionController::class, 'show']);
 });
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/wallet', [DigitalWalletController::class, 'show'])->name('wallet.show');
+    Route::post('/wallet/deposit', [DigitalWalletController::class, 'deposit'])->name('wallet.deposit');
+    Route::post('/wallet/withdraw', [DigitalWalletController::class, 'withdraw'])->name('wallet.withdraw');
+
+    Route::post('/transfer', [ForeignTransactionController::class, 'transfer'])->name('foreign.transfer');
+});
