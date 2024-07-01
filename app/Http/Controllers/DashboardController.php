@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Account;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -13,30 +14,37 @@ class DashboardController extends Controller
      * Fetch and display the dashboard summary.
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Inertia\Response
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        // Fetch accounts belonging to the authenticated user
-        $accounts = Account::where('user_id', $user->id)->get();
+            // Fetch accounts belonging to the authenticated user
+            $accounts = Account::where('user_id', $user->id)->get();
 
-        // Fetch recent transactions for the user
-        $recentTransactions = Transaction::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->take(10)
-            ->get();
+            // Fetch recent transactions for the user
+            $recentTransactions = Transaction::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get();
 
-        // Calculate total balance across all accounts
-        $totalBalance = $accounts->sum('balance');
+            // Calculate total balance across all accounts
+            $totalBalance = $accounts->sum('balance');
 
-        return response()->json([
-            'user' => $user,
-            'accounts' => $accounts,
-            'recent_transactions' => $recentTransactions,
-            'total_balance' => $totalBalance,
-        ]);
+            return Inertia::render('Dashboard', [
+                'user' => $user,
+                'accounts' => $accounts,
+                'recent_transactions' => $recentTransactions,
+                'total_balance' => $totalBalance,
+            ]);
+        } catch (\Exception $e) {
+            return Inertia::render('Error', [
+                'error' => 'Failed to fetch dashboard data',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -44,47 +52,68 @@ class DashboardController extends Controller
      *
      * @param  Request  $request
      * @param  int  $accountId
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Inertia\Response
      */
     public function accountTransactions(Request $request, $accountId)
     {
-        // Ensure the account belongs to the authenticated user
-        $account = Account::where('id', $accountId)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        try {
+            // Ensure the account belongs to the authenticated user
+            $account = Account::where('id', $accountId)
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
 
-        // Paginate transactions for the account
-        $transactions = Transaction::where('account_id', $account->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(10); // Adjust pagination as needed
+            // Paginate transactions for the account
+            $transactions = Transaction::where('account_id', $account->id)
+                ->orderBy('created_at', 'desc')
+                ->paginate(10); // Adjust pagination as needed
 
-        return response()->json($transactions);
+            return Inertia::render('AccountTransactions', [
+                'transactions' => $transactions,
+            ]);
+        } catch (\Exception $e) {
+            return Inertia::render('Error', [
+                'error' => 'Failed to fetch account transactions',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
      * Fetch summary of transactions for a specific period.
      *
      * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Inertia\Response
      */
     public function transactionSummary(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        try {
+            $request->validate([
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+            ]);
 
-        // Fetch transactions within the specified date range
-        $transactions = Transaction::where('user_id', Auth::id())
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->get();
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
 
-        // Calculate summary data (total count, total amount, etc.)
-        $totalCount = $transactions->count();
-        $totalAmount = $transactions->sum('amount');
+            // Fetch transactions within the specified date range
+            $transactions = Transaction::where('user_id', Auth::id())
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
 
-        return response()->json([
-            'total_count' => $totalCount,
-            'total_amount' => $totalAmount,
-            'transactions' => $transactions,
-        ]);
+            // Calculate summary data (total count, total amount, etc.)
+            $totalCount = $transactions->count();
+            $totalAmount = $transactions->sum('amount');
+
+            return Inertia::render('TransactionSummary', [
+                'total_count' => $totalCount,
+                'total_amount' => $totalAmount,
+                'transactions' => $transactions,
+            ]);
+        } catch (\Exception $e) {
+            return Inertia::render('Error', [
+                'error' => 'Failed to fetch transaction summary',
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

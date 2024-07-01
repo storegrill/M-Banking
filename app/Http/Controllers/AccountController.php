@@ -2,82 +2,57 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Account;
-use App\Models\Transaction;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // Ensure DB facade is imported
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class AccountController extends Controller
 {
-    public function createAccount(Request $request)
+    public function index()
     {
-        $request->validate([
-            'account_number' => 'required|string|unique:accounts',
-        ]);
+        $accounts = Account::all();
 
-        $account = Account::create([
-            'user_id' => Auth::id(),
-            'account_number' => $request->account_number,
-            'balance' => 0.00,
+        return Inertia::render('Accounts/Index', [
+            'accounts' => $accounts,
         ]);
-
-        return response()->json($account, 201);
     }
 
-    public function getAccounts()
+    public function store(Request $request)
     {
-        $accounts = Account::where('user_id', Auth::id())->get();
-        return response()->json($accounts);
-    }
-
-    public function transfer(Request $request)
-    {
-        $request->validate([
-            'from_account' => 'required|string|exists:accounts,account_number',
-            'to_account' => 'required|string|exists:accounts,account_number',
-            'amount' => 'required|numeric|min:0.01',
+        // Validate request data
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            // Add more validation rules as needed
         ]);
 
-        $fromAccount = Account::where('account_number', $request->from_account)->first();
-        $toAccount = Account::where('account_number', $request->to_account)->first();
+        // Create new account
+        $account = Account::create($validatedData);
 
-        if ($fromAccount->balance < $request->amount) {
-            return response()->json(['message' => 'Insufficient funds'], 400);
-        }
+        return redirect()->route('accounts.index')
+            ->with('success', 'Account created successfully.');
+    }
 
-        // Start a database transaction
-        DB::beginTransaction();
+    public function update(Request $request, Account $account)
+    {
+        // Validate request data
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            // Add more validation rules as needed
+        ]);
 
-        try {
-            // Perform the transfer
-            $fromAccount->balance -= $request->amount;
-            $toAccount->balance += $request->amount;
+        // Update account
+        $account->update($validatedData);
 
-            $fromAccount->save();
-            $toAccount->save();
+        return redirect()->route('accounts.index')
+            ->with('success', 'Account updated successfully.');
+    }
 
-            // Record transactions
-            Transaction::create([
-                'account_id' => $fromAccount->id,
-                'type' => 'debit',
-                'amount' => $request->amount,
-            ]);
+    public function destroy(Account $account)
+    {
+        // Delete account
+        $account->delete();
 
-            Transaction::create([
-                'account_id' => $toAccount->id,
-                'type' => 'credit',
-                'amount' => $request->amount,
-            ]);
-
-            // Commit the transaction if all went well
-            DB::commit();
-
-            return response()->json(['message' => 'Transfer successful']);
-        } catch (\Exception $e) {
-            // Rollback the transaction if an error occurred
-            DB::rollback();
-            return response()->json(['message' => 'Transfer failed', 'error' => $e->getMessage()], 500);
-        }
+        return redirect()->route('accounts.index')
+            ->with('success', 'Account deleted successfully.');
     }
 }

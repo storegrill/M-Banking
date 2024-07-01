@@ -8,72 +8,119 @@ use Illuminate\Support\Facades\Auth;
 
 class BudgetController extends Controller
 {
+    /**
+     * Display a listing of the user's budgets.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index()
     {
-        $budgets = Budget::where('user_id', Auth::id())->get();
-        return response()->json($budgets);
+        try {
+            $budgets = Budget::where('user_id', Auth::id())->get();
+            return response()->json($budgets);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to fetch budgets', 'error' => $e->getMessage()], 500);
+        }
     }
 
+    /**
+     * Store a newly created budget in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0',
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'amount' => 'required|numeric|min:0',
+            ]);
 
-        $budget = Budget::create([
-            'user_id' => Auth::id(),
-            'name' => $request->name,
-            'amount' => $request->amount,
-        ]);
+            $budget = Budget::create([
+                'user_id' => Auth::id(),
+                'name' => $request->name,
+                'amount' => $request->amount,
+            ]);
 
-        return response()->json($budget, 201);
+            return response()->json($budget, 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to create budget', 'error' => $e->getMessage()], 500);
+        }
     }
 
+    /**
+     * Display the specified budget.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function show($id)
     {
-        $budget = Budget::findOrFail($id);
+        try {
+            $budget = Budget::findOrFail($id);
 
-        // Check if the budget belongs to the authenticated user
-        if ($budget->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            if ($budget->user_id !== Auth::id()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            return response()->json($budget);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to fetch budget', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json($budget);
     }
 
+    /**
+     * Update the specified budget in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update(Request $request, $id)
     {
-        $budget = Budget::findOrFail($id);
+        try {
+            $budget = Budget::findOrFail($id);
 
-        // Check if the budget belongs to the authenticated user
-        if ($budget->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            if ($budget->user_id !== Auth::id()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'amount' => 'required|numeric|min:0',
+            ]);
+
+            $budget->name = $request->name;
+            $budget->amount = $request->amount;
+            $budget->save();
+
+            return response()->json($budget);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to update budget', 'error' => $e->getMessage()], 500);
         }
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0',
-        ]);
-
-        $budget->name = $request->name;
-        $budget->amount = $request->amount;
-        $budget->save();
-
-        return response()->json($budget);
     }
 
+    /**
+     * Remove the specified budget from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy($id)
     {
-        $budget = Budget::findOrFail($id);
+        try {
+            $budget = Budget::findOrFail($id);
 
-        // Check if the budget belongs to the authenticated user
-        if ($budget->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            if ($budget->user_id !== Auth::id()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            $budget->delete();
+
+            return response()->json(['message' => 'Budget deleted']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to delete budget', 'error' => $e->getMessage()], 500);
         }
-
-        $budget->delete();
-
-        return response()->json(['message' => 'Budget deleted']);
     }
 }

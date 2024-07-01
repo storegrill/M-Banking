@@ -10,18 +10,6 @@ use Illuminate\Support\Facades\Auth;
 class TrueLayerController extends Controller
 {
     /**
-     * Redirect the user to the TrueLayer authentication page.
-     *
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function redirectToTrueLayer()
-    {
-        $authUrl = $this->getAuthUrl();
-
-        return redirect()->away($authUrl);
-    }
-
-    /**
      * Handle callback from TrueLayer after user authentication.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -38,6 +26,13 @@ class TrueLayerController extends Controller
             // Ensure user is authenticated
             if (Auth::check()) {
                 $user = Auth::user();
+
+                // Ensure that the user instance is valid
+                if (!$user instanceof User) {
+                    return redirect()->route('login')->with('error', 'User authentication failed.');
+                }
+
+                // Update user's access token
                 $user->true_layer_access_token = $accessToken;
                 $user->save(); // Save the updated user instance
 
@@ -48,25 +43,6 @@ class TrueLayerController extends Controller
         }
 
         return redirect()->route('dashboard')->with('error', 'Failed to authenticate with TrueLayer.');
-    }
-
-    /**
-     * Get the authorization URL to redirect the user to TrueLayer.
-     *
-     * @return string
-     */
-    private function getAuthUrl(): string
-    {
-        $clientId = config('services.truelayer.client_id');
-        $redirectUri = route('truelayer.callback');
-        $scope = 'accounts balance transactions'; // Adjust scopes as per your requirements
-
-        $url = 'https://auth.truelayer.com/?response_type=code';
-        $url .= '&client_id=' . $clientId;
-        $url .= '&redirect_uri=' . urlencode($redirectUri);
-        $url .= '&scope=' . urlencode($scope);
-
-        return $url;
     }
 
     /**

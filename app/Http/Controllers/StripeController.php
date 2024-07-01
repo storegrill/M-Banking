@@ -43,7 +43,8 @@ class StripeController extends Controller
 
             return response()->json($charge, 201);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::error('Error creating charge: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create charge'], 500);
         }
     }
 
@@ -57,10 +58,10 @@ class StripeController extends Controller
                 $payload, $sigHeader, env('STRIPE_WEBHOOK_SECRET')
             );
         } catch (\UnexpectedValueException $e) {
-            // Invalid payload
+            Log::error('Invalid webhook payload: ' . $e->getMessage());
             return response()->json(['error' => 'Invalid payload'], 400);
         } catch (\Stripe\Exception\SignatureVerificationException $e) {
-            // Invalid signature
+            Log::error('Invalid webhook signature: ' . $e->getMessage());
             return response()->json(['error' => 'Invalid signature'], 400);
         }
 
@@ -75,7 +76,7 @@ class StripeController extends Controller
                     $transaction->update(['status' => 'succeeded']);
                 }
                 break;
-            // Handle other event types
+            // Add handling for other event types as needed
             default:
                 Log::info('Received unknown event type', ['event' => $event['type']]);
         }

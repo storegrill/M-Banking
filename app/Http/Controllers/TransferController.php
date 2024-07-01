@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Account;
 use App\Models\Transaction;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TransferController extends Controller
 {
@@ -22,11 +22,11 @@ class TransferController extends Controller
         $toAccount = Account::where('account_number', $request->to_account)->first();
 
         if (! $fromAccount || ! $toAccount) {
-            return response()->json(['message' => 'One or both accounts do not exist'], 404);
+            return response()->json(['error' => 'One or both accounts do not exist'], 404);
         }
 
         if ($fromAccount->balance < $request->amount) {
-            return response()->json(['message' => 'Insufficient funds'], 400);
+            return response()->json(['error' => 'Insufficient funds'], 400);
         }
 
         // Start a database transaction
@@ -56,11 +56,23 @@ class TransferController extends Controller
             // Commit the transaction if all went well
             DB::commit();
 
+            // Log successful transfer
+            Log::info('Transfer successful', [
+                'from_account' => $fromAccount->account_number,
+                'to_account' => $toAccount->account_number,
+                'amount' => $request->amount,
+            ]);
+
             return response()->json(['message' => 'Transfer successful']);
         } catch (\Exception $e) {
             // Rollback the transaction if an error occurred
             DB::rollback();
-            return response()->json(['message' => 'Transfer failed', 'error' => $e->getMessage()], 500);
+            Log::error('Transfer failed: ' . $e->getMessage(), [
+                'from_account' => $fromAccount->account_number,
+                'to_account' => $toAccount->account_number,
+                'amount' => $request->amount,
+            ]);
+            return response()->json(['error' => 'Transfer failed', 'message' => $e->getMessage()], 500);
         }
     }
 }

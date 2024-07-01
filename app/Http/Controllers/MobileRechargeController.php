@@ -6,21 +6,27 @@ use Illuminate\Http\Request;
 use App\Models\MobileRecharge;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MobileRechargeController extends Controller
 {
     /**
      * Display a listing of the user's mobile recharges.
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index()
     {
-        $recharges = MobileRecharge::where('user_id', Auth::id())->paginate(10); // Pagination by 10 items per page
+        $recharges = MobileRecharge::where('user_id', Auth::id())->paginate(10);
 
         return response()->json($recharges);
     }
 
     /**
      * Store a newly created mobile recharge in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -42,7 +48,7 @@ class MobileRechargeController extends Controller
                 'provider' => $request->provider,
             ]);
 
-            // Assuming there is a service to handle the actual recharge process
+            // Simulate a service call to handle the recharge process
             // $rechargeService = new RechargeService();
             // $rechargeService->process($recharge);
 
@@ -54,19 +60,28 @@ class MobileRechargeController extends Controller
 
     /**
      * Display the specified mobile recharge.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show($id)
     {
         try {
             $recharge = MobileRecharge::where('user_id', Auth::id())->findOrFail($id);
             return response()->json($recharge);
-        } catch (\Exception $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Recharge not found', 'message' => $e->getMessage()], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch recharge', 'message' => $e->getMessage()], 500);
         }
     }
 
     /**
      * Update the specified mobile recharge in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -89,6 +104,8 @@ class MobileRechargeController extends Controller
             $recharge->save();
 
             return response()->json($recharge);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Recharge not found', 'message' => $e->getMessage()], 404);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to update recharge', 'message' => $e->getMessage()], 500);
         }
@@ -96,6 +113,9 @@ class MobileRechargeController extends Controller
 
     /**
      * Remove the specified mobile recharge from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
@@ -104,6 +124,8 @@ class MobileRechargeController extends Controller
             $recharge->delete();
 
             return response()->json(['message' => 'Recharge deleted successfully']);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Recharge not found', 'message' => $e->getMessage()], 404);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to delete recharge', 'message' => $e->getMessage()], 500);
         }

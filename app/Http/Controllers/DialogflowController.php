@@ -8,37 +8,44 @@ use App\Models\Transaction;
 use App\Models\Dialogflow;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class DialogflowController extends Controller
 {
     public function handle(Request $request)
     {
-        $queryResult = $request->input('queryResult');
-        $intent = $queryResult['intent']['displayName'];
-        $parameters = $queryResult['parameters'];
+        try {
+            $queryResult = $request->input('queryResult');
+            $intent = $queryResult['intent']['displayName'];
+            $parameters = $queryResult['parameters'];
 
-        switch ($intent) {
-            case 'GetAccountBalance':
-                $response = $this->getAccountBalance($parameters);
-                break;
-            case 'TransferMoney':
-                $response = $this->transferMoney($parameters);
-                break;
-            default:
-                $response = response()->json([
-                    'fulfillmentText' => 'Sorry, I did not understand that. Can you please rephrase?'
-                ]);
+            switch ($intent) {
+                case 'GetAccountBalance':
+                    $response = $this->getAccountBalance($parameters);
+                    break;
+                case 'TransferMoney':
+                    $response = $this->transferMoney($parameters);
+                    break;
+                default:
+                    $response = response()->json([
+                        'fulfillmentText' => 'Sorry, I did not understand that. Can you please rephrase?'
+                    ]);
+            }
+
+            // Store interaction
+            Dialogflow::create([
+                'user_id' => Auth::id(),
+                'intent' => $intent,
+                'parameters' => json_encode($parameters),
+                'response' => $response->getData()->fulfillmentText,
+            ]);
+
+            return $response;
+        } catch (\Exception $e) {
+            return response()->json([
+                'fulfillmentText' => 'An error occurred while processing your request. Please try again later.'
+            ]);
         }
-
-        // Store interaction
-        Dialogflow::create([
-            'user_id' => Auth::id(),
-            'intent' => $intent,
-            'parameters' => json_encode($parameters),
-            'response' => $response->getData()->fulfillmentText,
-        ]);
-
-        return $response;
     }
 
     protected function getAccountBalance($parameters)

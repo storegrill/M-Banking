@@ -59,6 +59,11 @@ class VirtualCardController extends Controller
      */
     public function destroy(Request $request, $id)
     {
+        // Validate the ID parameter
+        if (!is_numeric($id) || $id <= 0) {
+            return response()->json(['error' => 'Invalid ID parameter'], 400);
+        }
+
         $user = $request->user();
         $virtualCard = VirtualCard::where('id', $id)->where('user_id', $user->id)->first();
 

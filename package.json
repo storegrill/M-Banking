@@ -6,15 +6,16 @@
         "build": "tsc && vite build"
     },
     "devDependencies": {
+        "@babel/preset-react": "^7.24.7",
         "@headlessui/react": "^2.0.0",
         "@inertiajs/react": "^1.0.0",
         "@tailwindcss/forms": "^0.5.3",
         "@types/node": "^18.19.39",
         "@types/react": "^18.0.28",
         "@types/react-dom": "^18.0.10",
-        "@vitejs/plugin-react": "^4.3.1",
+        "@vitejs/plugin-react": "^4.2.0",
         "autoprefixer": "^10.4.12",
-        "axios": "^1.6.4",
+        "axios": "^1.7.2",
         "laravel-vite-plugin": "^1.0",
         "postcss": "^8.4.31",
         "react": "^18.2.0",
@@ -24,6 +25,8 @@
         "vite": "^5.0"
     },
     "dependencies": {
-        "@alloc/quick-lru": "^5.2.0"
+        "@alloc/quick-lru": "^5.2.0",
+        "@inertiajs/inertia": "^0.11.1",
+        "@inertiajs/progress": "^0.2.7"
     }
 }

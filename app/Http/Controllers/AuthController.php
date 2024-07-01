@@ -2,80 +2,113 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Laravel\Sanctum\HasApiTokens;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class AuthController extends Controller
 {
     /**
+     * Show the registration form.
+     *
+     * @return \Inertia\Response
+     */
+    public function showRegisterForm(): Response
+    {
+        return Inertia::render('Auth/Register');
+    }
+
+    /**
      * Register a new user.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:8|confirmed',
+            ]);
 
-        // Create the new user
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
 
-        return response()->json(['message' => 'User registered successfully'], 201);
+            // Optionally, log in the user after registration
+            Auth::login($user);
+
+            // Redirect to dashboard or any desired page
+            return redirect()->route('dashboard')->with('success', 'User registered successfully');
+        } catch (ValidationException $e) {
+            return redirect()->back()->withErrors(['message' => $e->getMessage()])->withInput();
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['message' => 'User registration failed', 'error' => $e->getMessage()]);
+        }
     }
 
     /**
-     * Log in a user and issue a token for API authentication.
+     * Show the login form.
+     *
+     * @return \Inertia\Response
+     */
+    public function showLoginForm(): Response
+    {
+        return Inertia::render('Auth/Login');
+    }
+
+    /**
+     * Log in a user.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Validation\ValidationException
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
+        try {
+            $request->validate([
+                'email' => 'required|string|email',
+                'password' => 'required|string',
+            ]);
 
-        // Attempt to find the user by email
-        $user = User::where('email', $request->email)->first();
+            $credentials = $request->only('email', 'password');
 
-        // Check if user exists and verify password
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+            if (Auth::attempt($credentials)) {
+                return redirect()->route('dashboard')->with('success', 'Login successful');
+            }
+
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
+        } catch (ValidationException $e) {
+            return redirect()->back()->withErrors(['message' => $e->getMessage()])->withInput();
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['message' => 'Login failed', 'error' => $e->getMessage()]);
         }
-
-        // Issue a new token for the authenticated user
-        return response()->json([
-            'token' => $user->createToken('auth_token')->plainTextToken,
-            'user' => $user
-        ]);
     }
 
     /**
-     * Log out the authenticated user by revoking their current access token.
+     * Log out the authenticated user.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function logout(Request $request)
     {
-        // Revoke the current access token for the authenticated user
-        $request->user()->currentAccessToken()->delete();
+        try {
+            Auth::logout();
 
-        return response()->json(['message' => 'Logged out successfully']);
+            return redirect()->route('login')->with('success', 'Logged out successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['message' => 'Logout failed', 'error' => $e->getMessage()]);
+        }
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class NotificationController extends Controller
 {
@@ -15,8 +16,12 @@ class NotificationController extends Controller
      */
     public function index()
     {
-        $notifications = Notification::where('user_id', Auth::id())->get();
-        return response()->json($notifications);
+        try {
+            $notifications = Notification::where('user_id', Auth::id())->get();
+            return response()->json($notifications);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch notifications', 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -27,19 +32,25 @@ class NotificationController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'body' => 'required|string',
-        ]);
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'body' => 'required|string',
+            ]);
 
-        $notification = Notification::create([
-            'user_id' => Auth::id(),
-            'title' => $request->title,
-            'body' => $request->body,
-            'is_read' => false,
-        ]);
+            $notification = Notification::create([
+                'user_id' => Auth::id(),
+                'title' => $request->title,
+                'body' => $request->body,
+                'is_read' => false,
+            ]);
 
-        return response()->json($notification, 201);
+            return response()->json($notification, 201);
+        } catch (ValidationException $e) {
+            return response()->json(['error' => 'Validation failed', 'messages' => $e->validator->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to store notification', 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -50,11 +61,15 @@ class NotificationController extends Controller
      */
     public function markAsRead($id)
     {
-        $notification = Notification::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
-        $notification->is_read = true;
-        $notification->save();
+        try {
+            $notification = Notification::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
+            $notification->is_read = true;
+            $notification->save();
 
-        return response()->json(['message' => 'Notification marked as read']);
+            return response()->json(['message' => 'Notification marked as read']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to mark notification as read', 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -65,9 +80,13 @@ class NotificationController extends Controller
      */
     public function destroy($id)
     {
-        $notification = Notification::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
-        $notification->delete();
+        try {
+            $notification = Notification::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
+            $notification->delete();
 
-        return response()->json(['message' => 'Notification deleted']);
+            return response()->json(['message' => 'Notification deleted']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to delete notification', 'message' => $e->getMessage()], 500);
+        }
     }
 }

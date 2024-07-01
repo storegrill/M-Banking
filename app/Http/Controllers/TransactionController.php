@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\Account;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TransactionController extends Controller
 {
@@ -79,6 +80,7 @@ class TransactionController extends Controller
             return response()->json($transaction, 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Transaction failed: ' . $e->getMessage());
             return response()->json(['error' => 'Transaction failed'], 500);
         }
     }
